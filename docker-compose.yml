@@ -1,0 +1,62 @@
+version: '3'
+
+services:
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8080:8080
+    depends_on:
+      - broker
+      - schema-registry0
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:29092
+      KAFKA_CLUSTERS_0_METRICS_PORT: 9101
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry0:8085
+      DYNAMIC_CONFIG_ENABLED: 'true'
+      KAFKA_CLUSTERS_0_AUDIT_TOPICAUDITENABLED: 'true'
+      KAFKA_CLUSTERS_0_AUDIT_CONSOLEAUDITENABLED: 'true'
+
+  broker:
+    image: confluentinc/confluent-local:latest
+    hostname: broker
+    container_name: broker
+    ports:
+      - 9092:9092
+      - 9101:9101
+    environment:
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@broker:29093'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092" 
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092"
+
+  schema-registry0:
+    image: confluentinc/cp-schema-registry:latest
+    ports:
+      - 8085:8085
+    depends_on:
+      - broker
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://broker:29092
+      SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: PLAINTEXT
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry0
+      SCHEMA_REGISTRY_LISTENERS: http://schema-registry0:8085
+      SCHEMA_REGISTRY_SCHEMA_REGISTRY_INTER_INSTANCE_PROTOCOL: "http"
+      SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL: INFO
+      SCHEMA_REGISTRY_KAFKASTORE_TOPIC: _schemas
+
+  kafka-init-topics:
+    image: confluentinc/cp-kafka:latest
+    volumes:
+       - ./data/message.json:/data/message.json
+    depends_on:
+      - broker
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+               cub kafka-ready -b broker:29092 1 30 && \
+               kafka-topics --create --topic second.users --partitions 3 --replication-factor 1 --if-not-exists --bootstrap-server broker:29092 && \
+               kafka-topics --create --topic second.messages --partitions 2 --replication-factor 1 --if-not-exists --bootstrap-server broker:29092 && \
+               kafka-topics --create --topic first.messages --partitions 2 --replication-factor 1 --if-not-exists --bootstrap-server broker:29092 && \
+               kafka-console-producer --bootstrap-server broker:29092 --topic second.users < /data/message.json'"
