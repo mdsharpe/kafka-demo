@@ -1,0 +1,19 @@
+{
+    "namespace": "Model",
+    "type": "record",
+    "name": "Transaction",
+    "fields": [
+        {
+            "name": "Product",
+            "type": "string"
+        },
+        {
+            "name": "Quantity",
+            "type": "int"
+        },
+        {
+            "name": "Value",
+            "type": "double"
+        }
+    ]
+}
