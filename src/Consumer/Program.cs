@@ -1,24 +1,30 @@
-﻿// See https://aka.ms/new-console-template for more information
-
+﻿using System.Net;
 using Confluent.Kafka;
 using Confluent.Kafka.SyncOverAsync;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
+using Microsoft.Extensions.Configuration;
 using Model;
 using Spectre.Console;
+
+var config = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .Build();
 
 const string Topic = "transactions";
 
 ConsumerConfig consumerConfig = new()
 {
-    BootstrapServers = "localhost:9092",
+    BootstrapServers = config.GetConnectionString("Kafka"),
+    ClientId = Dns.GetHostName(),
     GroupId = "console-consumers",
     AutoOffsetReset = AutoOffsetReset.Earliest,
     EnableAutoCommit = false,
     EnableAutoOffsetStore = false
 };
 
-var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8085" };
+var schemaRegistryConfig = new SchemaRegistryConfig { Url = config.GetConnectionString("SchemaRegistry") };
 
 CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) =>
@@ -27,7 +33,7 @@ Console.CancelKeyPress += (_, e) =>
     cts.Cancel();
 };
 
-AnsiConsole.WriteLine("Welcome to Kafka Adventure Console Consumer.");
+AnsiConsole.Write(new Rule($"Welcome to Kafka Transactions - [yellow]Consumer console app[/]").RuleStyle("grey").LeftJustified());
 AnsiConsole.WriteLine();
 
 using (var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig))
@@ -37,27 +43,34 @@ using (var consumer = new ConsumerBuilder<string, Transaction>(consumerConfig)
 {
     consumer.Subscribe(Topic);
 
-    while (!cts.IsCancellationRequested)
+    try
     {
-        var result = consumer.Consume(cts.Token);
-
-        if (result.IsPartitionEOF)
+        while (!cts.IsCancellationRequested)
         {
-            await Task.Delay(1000, cts.Token);
-            continue;
+            var result = consumer.Consume(cts.Token);
+
+            if (result.IsPartitionEOF)
+            {
+                await Task.Delay(1000, cts.Token);
+                continue;
+            }
+
+            var transaction = result.Message.Value;
+
+            var table = new Table();
+            table.AddColumn("Key");
+            table.AddColumn("Product");
+            table.AddColumn("Quantity");
+            table.AddColumn("Value");
+            table.AddRow(result.Message.Key, transaction.Product, transaction.Quantity.ToString(), transaction.Value.ToString());
+            AnsiConsole.Write(table);
+
+            consumer.StoreOffset(result);
+            consumer.Commit(result);
         }
-         
-        var transaction = result.Message.Value;
-
-        var table = new Table();
-        table.AddColumn("Key");
-        table.AddColumn("Product");
-        table.AddColumn("Quantity");
-        table.AddColumn("Value");
-        table.AddRow(result.Message.Key, transaction.Product, transaction.Quantity.ToString(), transaction.Value.ToString());
-        AnsiConsole.Write(table);
-
-        consumer.StoreOffset(result);
-        consumer.Commit(result);
+    }
+    catch (OperationCanceledException)
+    {
+        // Ctrl-C was pressed.
     }
 }

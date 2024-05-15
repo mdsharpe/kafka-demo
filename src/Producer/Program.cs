@@ -1,25 +1,30 @@
 ﻿using System.Net;
-using Avro.Specific;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
+using Microsoft.Extensions.Configuration;
 using Model;
 using Spectre.Console;
 
+var config = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .Build();
+
 const string Topic = "transactions";
 
-var producerConfig = new ProducerConfig
+ProducerConfig producerConfig = new()
 {
-    BootstrapServers = "localhost:9092",
+    BootstrapServers = config.GetConnectionString("Kafka"),
     ClientId = Dns.GetHostName(),
     Acks = Acks.All,
     //EnableIdempotence = true,
     Partitioner = Partitioner.Murmur2Random
 };
 
-var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8085" };
+var schemaRegistryConfig = new SchemaRegistryConfig { Url = config.GetConnectionString("SchemaRegistry") };
 
-AnsiConsole.WriteLine("Welcome to Kafka Transactions.");
+AnsiConsole.Write(new Rule($"Welcome to Kafka Transactions - [yellow]Producer console app[/]").RuleStyle("grey").LeftJustified());
 AnsiConsole.WriteLine();
 
 using (var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig))
@@ -48,6 +53,10 @@ using (var producer = new ProducerBuilder<string, Transaction>(producerConfig)
                 Value = transaction
             });
 
+        AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine($"[green]Delivered message to {deliveryReport.TopicPartitionOffset}[/]");
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Rule().RuleStyle("grey"));
+        AnsiConsole.WriteLine();
     } while (true);
 }
