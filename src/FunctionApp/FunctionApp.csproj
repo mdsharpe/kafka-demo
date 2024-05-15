@@ -7,12 +7,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="local.settings.json" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.22.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Kafka" Version="3.10.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.17.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Model\Model.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">
@@ -25,8 +25,5 @@
   </ItemGroup>
   <ItemGroup>
     <Using Include="System.Threading.ExecutionContext" Alias="ExecutionContext" />
-  </ItemGroup>  
-  <Target Name="MakeLocalSettings" BeforeTargets="Compile" Condition="'$(Configuration)' == 'Debug' And '$(OS)' == 'Windows_NT' ">
-    <Exec Command="powershell.exe -NonInteractive -executionpolicy bypass -command &quot;&amp; {.\Create-LocalSettings.ps1 '$(SolutionDir)'}&quot;" />
-  </Target>
+  </ItemGroup>
 </Project>

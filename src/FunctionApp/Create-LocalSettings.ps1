@@ -1,7 +1,10 @@
 $settings = @{
+    "IsEncrypted" = $false;
     "Values"      = @{
         "AzureWebJobsStorage"                                             = "UseDevelopmentStorage=true";
         "FUNCTIONS_WORKER_RUNTIME"                                        = "dotnet-isolated";
+        "BOOTSTRAP_SERVER"                                                = "localhost:9092";
+        "SCHEMA_REGISTRY"                                                 = "http://localhost:8085";
     }
 }
 

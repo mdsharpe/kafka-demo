@@ -1,9 +1,9 @@
 {
-  "profiles": {
-    "FunctionApp": {
-      "commandName": "Project",
-      "commandLineArgs": "--port 7001",
-      "launchBrowser": false
+    "profiles": {
+        "FunctionApp": {
+            "commandName": "Project",
+            "commandLineArgs": "",
+            "launchBrowser": false
+        }
     }
-  }
 }
