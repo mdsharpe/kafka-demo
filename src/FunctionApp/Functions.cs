@@ -1,27 +1,22 @@
-﻿using Confluent.Kafka;
-using Confluent.SchemaRegistry;
-using Confluent.SchemaRegistry.Serdes;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Converters;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Model;
 
 namespace FunctionApp;
-internal class Functions(IConfiguration configuration)
+internal class Functions(AvroDeserializer deserializer)
 {
     [Function(nameof(ProcessTransaction))]
     public async Task ProcessTransaction(
         [KafkaTrigger(
             brokerList: "BOOTSTRAP_SERVER",
             topic: "transactions",
-            ConsumerGroup = "function-consumers")] byte[] bytez,
-        [InputConverter(typeof(AvroInputConverter))] Transaction transaction,
+            ConsumerGroup = "function-consumers")] byte[] value,
         string key,
         FunctionContext context)
     {
-        var logger = context.GetLogger<Functions>();
+        var transaction = await deserializer.DeserializeAsync<Transaction>(value);
 
-        logger.LogInformation($"Key: {key}; Product: {transaction.Product}; Quantity: {transaction.Quantity}; Value: {transaction.Value}");
+        var logger = context.GetLogger<Functions>();
+        logger.LogInformation($"key: {key}; product: {transaction.Product}; quantity: {transaction.Quantity}; value: {transaction.Value}");
     }
 }
