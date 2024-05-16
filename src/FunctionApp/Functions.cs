@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Model;
 
 namespace FunctionApp;
-internal class Functions(AvroDeserializer deserializer)
+internal class Functions(AvroSerde serde)
 {
     [Function(nameof(ProcessTransaction))]
     public async Task ProcessTransaction(
@@ -14,9 +14,9 @@ internal class Functions(AvroDeserializer deserializer)
         string key,
         FunctionContext context)
     {
-        var transaction = await deserializer.DeserializeAsync<Transaction>(value);
+        var transaction = await serde.DeserializeAsync<Transaction>(value);
 
-        var logger = context.GetLogger<Functions>();
+        var logger = context.GetLogger(nameof(ProcessTransaction));
         logger.LogInformation($"key: {key}; product: {transaction.Product}; quantity: {transaction.Quantity}; value: {transaction.Value}");
     }
 }

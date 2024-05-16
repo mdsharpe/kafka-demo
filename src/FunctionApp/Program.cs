@@ -21,7 +21,7 @@ var host = new HostBuilder()
                     Url = s.GetRequiredService<IConfiguration>()["SCHEMA_REGISTRY"]
                 }));
 
-        services.AddSingleton<AvroDeserializer>();
+        services.AddSingleton<AvroSerde>();
     })
     .Build();
 

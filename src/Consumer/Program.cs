@@ -47,26 +47,34 @@ using (var consumer = new ConsumerBuilder<string, Transaction>(consumerConfig)
     {
         while (!cts.IsCancellationRequested)
         {
-            var result = consumer.Consume(cts.Token);
-
-            if (result.IsPartitionEOF)
+            try
             {
-                await Task.Delay(1000, cts.Token);
-                continue;
+                var result = consumer.Consume(cts.Token);
+
+                if (result.IsPartitionEOF)
+                {
+                    await Task.Delay(1000, cts.Token);
+                    continue;
+                }
+
+                var transaction = result.Message.Value;
+
+                var table = new Table();
+                table.AddColumn("Key");
+                table.AddColumn("Product");
+                table.AddColumn("Quantity");
+                table.AddColumn("Value");
+                table.AddRow(result.Message.Key, transaction.Product, transaction.Quantity.ToString(), transaction.Value.ToString());
+                AnsiConsole.Write(table);
+
+                consumer.StoreOffset(result);
+                consumer.Commit(result);
             }
-
-            var transaction = result.Message.Value;
-
-            var table = new Table();
-            table.AddColumn("Key");
-            table.AddColumn("Product");
-            table.AddColumn("Quantity");
-            table.AddColumn("Value");
-            table.AddRow(result.Message.Key, transaction.Product, transaction.Quantity.ToString(), transaction.Value.ToString());
-            AnsiConsole.Write(table);
-
-            consumer.StoreOffset(result);
-            consumer.Commit(result);
+            catch (ConsumeException ex)
+            {
+                AnsiConsole.WriteException(ex);
+                AnsiConsole.WriteLine();
+            }
         }
     }
     catch (OperationCanceledException)
