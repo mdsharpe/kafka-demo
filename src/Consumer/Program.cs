@@ -1,30 +1,24 @@
-﻿using System.Net;
-using Confluent.Kafka;
-using Confluent.Kafka.SyncOverAsync;
-using Confluent.SchemaRegistry;
-using Confluent.SchemaRegistry.Serdes;
+﻿using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Model;
+using Shared;
 using Spectre.Console;
+
+const string Topic = "transactions";
 
 var config = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .Build();
 
-const string Topic = "transactions";
+var options = new KafkaOptions();
+config.GetSection("Kafka").Bind(options);
+var kafkaOptions = Options.Create(options);
 
-ConsumerConfig consumerConfig = new()
-{
-    BootstrapServers = config.GetConnectionString("Kafka"),
-    ClientId = Dns.GetHostName(),
-    GroupId = "console-consumers",
-    AutoOffsetReset = AutoOffsetReset.Earliest,
-    EnableAutoCommit = false,
-    EnableAutoOffsetStore = false
-};
-
-var schemaRegistryConfig = new SchemaRegistryConfig { Url = config.GetConnectionString("SchemaRegistry") };
+var kafkaFactory = new KafkaFactory(kafkaOptions);
+var consumerConfig = kafkaFactory.GetConsumerConfig("console-consumers");
+var deserializer = kafkaFactory.GetDeserializer<Transaction>();
 
 CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) =>
@@ -36,9 +30,8 @@ Console.CancelKeyPress += (_, e) =>
 AnsiConsole.Write(new Rule($"Welcome to Kafka Transactions - [yellow]Consumer console app[/]").RuleStyle("grey").LeftJustified());
 AnsiConsole.WriteLine();
 
-using (var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig))
 using (var consumer = new ConsumerBuilder<string, Transaction>(consumerConfig)
-    .SetValueDeserializer(new AvroDeserializer<Transaction>(schemaRegistry).AsSyncOverAsync())
+    .SetValueDeserializer(deserializer)
     .Build())
 {
     consumer.Subscribe(Topic);

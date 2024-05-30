@@ -1,19 +1,22 @@
-﻿using Confluent.Kafka;
-using Confluent.SchemaRegistry;
-using Confluent.SchemaRegistry.Serdes;
+﻿using System.Text;
+using Confluent.Kafka;
+using Shared;
 
 namespace FunctionApp;
-internal class AvroSerde(ISchemaRegistryClient schemaRegistry)
+internal class AvroSerde(KafkaFactory kafkaFactory)
 {
-    public Task<byte[]> SerializeAsync<T>(T value)
+    public T Deserialize<T>(byte[] value, IEnumerable<KeyValuePair<string, string>> base64EncodedHeaders)
     {
-        var serializer = new AvroSerializer<T>(schemaRegistry);
-        return serializer.SerializeAsync(value, SerializationContext.Empty);
-    }
+        var deserializer = kafkaFactory.GetDeserializer<T>();
 
-    public Task<T> DeserializeAsync<T>(byte[] value)
-    {
-        var deserializer = new AvroDeserializer<T>(schemaRegistry);
-        return deserializer.DeserializeAsync(value, false, SerializationContext.Empty);
+        var headersEnumerable = base64EncodedHeaders
+            .Select(header => new Header(header.Key, Convert.FromBase64String(header.Value)));
+
+        var context = new SerializationContext(
+            component: default,
+            topic: default,
+            headers: [.. headersEnumerable]);
+
+        return deserializer.Deserialize(value, false, context);
     }
 }

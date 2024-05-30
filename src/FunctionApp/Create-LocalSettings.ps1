@@ -1,10 +1,14 @@
 $settings = @{
     "IsEncrypted" = $false;
     "Values"      = @{
-        "AzureWebJobsStorage"                                             = "UseDevelopmentStorage=true";
-        "FUNCTIONS_WORKER_RUNTIME"                                        = "dotnet-isolated";
-        "BOOTSTRAP_SERVER"                                                = "localhost:9092";
-        "SCHEMA_REGISTRY"                                                 = "http://localhost:8085";
+        "AzureWebJobsStorage"         = "UseDevelopmentStorage=true";
+        "FUNCTIONS_WORKER_RUNTIME"    = "dotnet-isolated";
+        "Kafka:BootstrapServers"      = "localhost:9092";
+        "Kafka:Username"              = "";
+        "Kafka:Password"              = "";
+        "Kafka:SchemaRegistry"        = "localhost:8085";
+        "Kafka:AzSchemaGroup"         = "";
+        "Kafka:IsLocalDevEnvironment" = $true;
     }
 }
 

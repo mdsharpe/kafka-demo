@@ -1,8 +1,8 @@
-using Confluent.SchemaRegistry;
 using FunctionApp;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Shared;
 
 var configuration = new ConfigurationBuilder().Build();
 
@@ -12,15 +12,10 @@ var host = new HostBuilder()
     {
         configure.AddConfiguration(configuration);
     })
-    .ConfigureServices(services =>
+    .ConfigureServices((builder, services) =>
     {
-        services.AddSingleton<ISchemaRegistryClient, CachedSchemaRegistryClient>(
-            s => new CachedSchemaRegistryClient(
-                new SchemaRegistryConfig
-                {
-                    Url = s.GetRequiredService<IConfiguration>()["SCHEMA_REGISTRY"]
-                }));
-
+        services.Configure<KafkaOptions>(builder.Configuration.GetSection("Kafka"));
+        services.AddSingleton<KafkaFactory>();
         services.AddSingleton<AvroSerde>();
     })
     .Build();
