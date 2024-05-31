@@ -1,6 +1,7 @@
-﻿using Confluent.Kafka;
+﻿using System.Net;
+using System.Text.Json;
+using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
 using Model;
 using Shared;
 using Spectre.Console;
@@ -14,11 +15,21 @@ var config = new ConfigurationBuilder()
 
 var options = new KafkaOptions();
 config.GetSection("Kafka").Bind(options);
-var kafkaOptions = Options.Create(options);
 
-var kafkaFactory = new KafkaFactory(kafkaOptions);
-var consumerConfig = kafkaFactory.GetConsumerConfig("console-consumers");
-var deserializer = kafkaFactory.GetDeserializer<Transaction>();
+var consumerConfig = new ConsumerConfig
+{
+    BootstrapServers = options.BootstrapServers,
+    ClientId = Dns.GetHostName(),
+    GroupId = "console-consumers",
+    AutoOffsetReset = AutoOffsetReset.Earliest,
+    EnableAutoCommit = false,
+    EnableAutoOffsetStore = false
+};
+
+////var schemaRegistryConfig = new SchemaRegistryConfig
+////{
+////    Url = options.SchemaRegistry
+////};
 
 CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) =>
@@ -30,8 +41,9 @@ Console.CancelKeyPress += (_, e) =>
 AnsiConsole.Write(new Rule($"Welcome to Kafka Transactions - [yellow]Consumer console app[/]").RuleStyle("grey").LeftJustified());
 AnsiConsole.WriteLine();
 
-using (var consumer = new ConsumerBuilder<string, Transaction>(consumerConfig)
-    .SetValueDeserializer(deserializer)
+////using (var schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig))
+using (var consumer = new ConsumerBuilder<string, string>(consumerConfig)
+    ////.SetValueDeserializer(new AvroDeserializer<Transaction>(schemaRegistryClient).AsSyncOverAsync())
     .Build())
 {
     consumer.Subscribe(Topic);
@@ -50,7 +62,7 @@ using (var consumer = new ConsumerBuilder<string, Transaction>(consumerConfig)
                     continue;
                 }
 
-                var transaction = result.Message.Value;
+                var transaction = JsonSerializer.Deserialize<Transaction>(result.Message.Value)!;
 
                 var table = new Table();
                 table.AddColumn("Key");

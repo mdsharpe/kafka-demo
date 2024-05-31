@@ -1,6 +1,7 @@
-﻿using Confluent.Kafka;
+﻿using System.Net;
+using System.Text.Json;
+using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
 using Model;
 using Shared;
 using Spectre.Console;
@@ -14,17 +15,26 @@ var config = new ConfigurationBuilder()
 
 var options = new KafkaOptions();
 config.GetSection("Kafka").Bind(options);
-var kafkaOptions = Options.Create(options);
 
-var kafkaFactory = new KafkaFactory(kafkaOptions);
-var producerConfig = kafkaFactory.GetProducerConfig();
-var serializer = kafkaFactory.GetAsyncSerializer<Transaction>();
+var producerConfig = new ProducerConfig
+{
+    BootstrapServers = options.BootstrapServers,
+    ClientId = Dns.GetHostName(),
+    Acks = Acks.All,
+    Partitioner = Partitioner.Murmur2Random
+};
+
+////var schemaRegistryConfig = new SchemaRegistryConfig
+////{
+////    Url = options.SchemaRegistry
+////};
 
 AnsiConsole.Write(new Rule($"Welcome to Kafka Transactions - [yellow]Producer console app[/]").RuleStyle("grey").LeftJustified());
 AnsiConsole.WriteLine();
 
-using (var producer = new ProducerBuilder<string, Transaction>(producerConfig)
-    .SetValueSerializer(serializer)
+////using (var schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig))
+using (var producer = new ProducerBuilder<string, string>(producerConfig)
+    ////.SetValueSerializer(new AvroSerializer<Transaction>(schemaRegistryClient))
     .Build())
 {
     do
@@ -42,10 +52,10 @@ using (var producer = new ProducerBuilder<string, Transaction>(producerConfig)
 
         var deliveryReport = await producer.ProduceAsync(
             Topic,
-            new Message<string, Transaction>
+            new Message<string, string>
             {
                 Key = product,
-                Value = transaction
+                Value = JsonSerializer.Serialize(transaction)
             });
 
         AnsiConsole.WriteLine();
