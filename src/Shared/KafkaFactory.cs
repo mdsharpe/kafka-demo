@@ -14,7 +14,7 @@ public class KafkaFactory(IOptions<KafkaOptions> options)
         var builder = new ProducerBuilder<TKey, TValue>(GetProducerConfig())
             .SetValueSerializer(GetAsyncSerializer<TValue>());
 
-        if (options.Value.IsLocalDevEnvironment)
+        if (!options.Value.IsLocalDevEnvironment)
         {
             builder = builder.SetOAuthBearerTokenRefreshHandler(OAuthTokenRefreshCallback);
         }
@@ -27,7 +27,7 @@ public class KafkaFactory(IOptions<KafkaOptions> options)
         var builder = new ConsumerBuilder<TKey, TValue>(GetProducerConfig())
             .SetValueDeserializer(GetDeserializer<TValue>());
 
-        if (options.Value.IsLocalDevEnvironment)
+        if (!options.Value.IsLocalDevEnvironment)
         {
             builder = builder.SetOAuthBearerTokenRefreshHandler(OAuthTokenRefreshCallback);
         }
@@ -122,7 +122,7 @@ public class KafkaFactory(IOptions<KafkaOptions> options)
         {
             var token = new DefaultAzureCredential()
                 .GetToken(
-                    new TokenRequestContext([$"https://enable-ms-kafka-demo.servicebus.windows.net/.default"]));
+                    new TokenRequestContext([$"https://{options.Value.AzEventHubsNamespace}.servicebus.windows.net/.default"]));
 
             client.OAuthBearerSetToken(
                 tokenValue: token.Token,
