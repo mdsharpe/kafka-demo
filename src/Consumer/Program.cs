@@ -17,8 +17,6 @@ config.GetSection("Kafka").Bind(options);
 var kafkaOptions = Options.Create(options);
 
 var kafkaFactory = new KafkaFactory(kafkaOptions);
-var consumerConfig = kafkaFactory.GetConsumerConfig("console-consumers");
-var deserializer = kafkaFactory.GetDeserializer<Transaction>();
 
 CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, e) =>
@@ -30,9 +28,7 @@ Console.CancelKeyPress += (_, e) =>
 AnsiConsole.Write(new Rule($"Welcome to Kafka Transactions - [yellow]Consumer console app[/]").RuleStyle("grey").LeftJustified());
 AnsiConsole.WriteLine();
 
-using (var consumer = new ConsumerBuilder<string, Transaction>(consumerConfig)
-    .SetValueDeserializer(deserializer)
-    .Build())
+using (var consumer = kafkaFactory.CreateConsumer<string, Transaction>())
 {
     consumer.Subscribe(Topic);
 

@@ -17,15 +17,11 @@ config.GetSection("Kafka").Bind(options);
 var kafkaOptions = Options.Create(options);
 
 var kafkaFactory = new KafkaFactory(kafkaOptions);
-var producerConfig = kafkaFactory.GetProducerConfig();
-var serializer = kafkaFactory.GetAsyncSerializer<Transaction>();
 
 AnsiConsole.Write(new Rule($"Welcome to Kafka Transactions - [yellow]Producer console app[/]").RuleStyle("grey").LeftJustified());
 AnsiConsole.WriteLine();
 
-using (var producer = new ProducerBuilder<string, Transaction>(producerConfig)
-    .SetValueSerializer(serializer)
-    .Build())
+using (var producer = kafkaFactory.CreateProducer<string, Transaction>())
 {
     do
     {
