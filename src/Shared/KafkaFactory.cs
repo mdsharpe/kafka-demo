@@ -111,11 +111,6 @@ public class KafkaFactory(IOptions<KafkaOptions> options)
         }
     }
 
-    /// <summary>
-    /// Kafka Client callback to get or refresh a Token
-    /// </summary>
-    /// <param name="client"></param>
-    /// <param name="config"></param>
     private void OAuthTokenRefreshCallback(IClient client, string config)
     {
         try
